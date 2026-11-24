@@ -43,30 +43,38 @@ select{font:inherit;font-size:13px;color:var(--fg);background:var(--card);border
 .ylab{font-size:13px;font-variant-numeric:tabular-nums;min-width:36px}
 .stage{display:flex;gap:12px;align-items:flex-start;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .gwrap{position:relative;flex:1 1 auto}
-#g{display:block;width:100%;height:auto;touch-action:none;cursor:grab}
+#g{display:block;width:100%;height:auto;touch-action:none;cursor:grab;overflow:hidden}
 .tools{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .pills{display:flex;gap:6px}
 .pill{font-size:12px;background:var(--ctl);border:1px solid var(--line);border-radius:6px;padding:6px 10px;white-space:nowrap}
 .zoom{display:flex;gap:6px}
 .zoom .btn{min-width:34px;padding:6px 8px}
 .hint{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:var(--ctl);border-radius:6px;padding:5px 10px;pointer-events:none}
-.edge{fill:none;stroke-linecap:round;stroke:var(--edge);opacity:.5}
-.edge.co{stroke:var(--edge2);opacity:.14}
+.edge{fill:none;stroke-linecap:round;stroke:var(--edge);opacity:.55;pointer-events:none}
+.edge.co{stroke:var(--edge2);opacity:.13;stroke-width:1px}
 .edge.und{stroke-dasharray:2 4}
+.hit{stroke:transparent;stroke-width:14px;cursor:pointer}
 .node{cursor:pointer}
-.node .ring{fill:none;stroke:var(--bg);stroke-width:1.5}
-.node text{font:11.5px var(--font);fill:var(--label);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round;pointer-events:none;font-weight:300}
+.node .tap{fill:transparent}
+.node text{font-family:var(--font);fill:var(--label);paint-order:stroke;stroke:var(--halo);stroke-linejoin:round;pointer-events:none;font-weight:300;transition:opacity .2s}
+.node text.off{display:none}
 .node.multi text,.node.ddf text{font-weight:600}
-.node text.minor{display:none}
-#g.zoomed .node text.minor,svg.pick .node.hot text.minor,.node:hover text.minor,.node:focus-visible text.minor{display:inline}
-.node:focus{outline:none}.node:focus-visible .ring{stroke:var(--accent);stroke-width:3}
-.node:hover .ring{stroke:var(--fg);stroke-width:2}
-svg.pick .dim{opacity:.07}
-svg.pick .edge.hot{opacity:.9;stroke:var(--accent)}
-svg.pick .edge.co.hot{opacity:.55;stroke:var(--edge)}
+.node:focus{outline:none}.node:focus-visible .ring{stroke:var(--accent)!important;stroke-width:3}
+.node,.edge{transition:opacity .25s}
+svg.pick .dim{opacity:.07!important}
+svg.pick .edge.hot{opacity:.95;stroke:var(--accent)}
+svg.pick .edge.co.hot{opacity:.6;stroke:var(--edge);stroke-width:1.6px}
 svg.pick .node.hot text{font-weight:500}
-svg.pick .node.picked .ring{stroke:var(--accent);stroke-width:3}
+svg.pick .node.picked .ring{stroke:var(--accent)!important;stroke-width:3}
 svg.pick .node.picked text{font-weight:700}
+#tip{position:absolute;z-index:6;max-width:300px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;line-height:1.45;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+#tip .hd{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+#tip .cta{font-size:11px;color:var(--accent);white-space:nowrap}
+#tip .m{color:var(--muted)}
+#tip ul{margin:6px 0 0;padding:0;list-style:none}
+#tip li{margin:2px 0}
+#tip i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+#empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--muted);pointer-events:none}
 #detail{flex:0 0 310px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:8px 0;font-size:13px;max-height:720px;overflow-y:auto;position:relative}
 #detail[hidden]{display:none}
 #detail h2{font-size:17px;font-weight:600;margin:0 28px 2px 0}
@@ -89,7 +97,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 details{border-top:1px solid var(--line);padding-top:10px;font-size:13px;color:var(--muted)}
 summary{cursor:pointer;color:var(--fg);font-weight:500}
 details p{max-width:76ch}
-@media(max-width:600px){#g{aspect-ratio:3/4}.tools{position:static;flex-direction:row;justify-content:space-between;padding:8px 0}.hint{position:static;display:block;margin:6px 0}}
+@media(max-width:600px){.tools{position:static;flex-direction:row;justify-content:space-between;padding:8px 0}.hint{position:static;display:block;margin:6px 0}}
 @media(max-width:820px){.stage{flex-direction:column}#detail{flex:none;width:100%;max-height:none}.sel{margin-left:0}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -115,12 +123,14 @@ details p{max-width:76ch}
 
 <div class="stage">
  <div class="gwrap">
-  <svg id="g" viewBox="0 0 1000 720" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Network of the Doris Duke Foundation's co-funders"></svg>
+  <svg id="g" viewBox="0 0 1240 940" role="img" aria-label="Network of the Doris Duke Foundation's co-funders"></svg>
   <div class="tools">
    <div class="pills"><span class="pill" id="nf">0 funders</span><span class="pill" id="np">0 grant programs</span></div>
    <div class="zoom"><button class="btn" id="reset">Reset</button><button class="btn" id="zin" aria-label="Zoom in">+</button><button class="btn" id="zout" aria-label="Zoom out">−</button></div>
   </div>
-  <div class="hint" id="hint">Click a funder to see its programs · hover or zoom in for more names · drag to move</div>
+  <div class="hint" id="hint">Hover a funder or line for details · click to pin and zoom · drag to move</div>
+  <div id="tip" hidden></div>
+  <div id="empty">No programs match these filters</div>
  </div>
  <aside id="detail" hidden></aside>
 </div>
@@ -134,7 +144,7 @@ details p{max-width:76ch}
 <details>
  <summary>About this data</summary>
  <p>Each grant program here has the Doris Duke Foundation (DDF) and at least one other funder behind it, found on dorisduke.org and in partners' announcements. Categories use DDF's official program names (Arts, Building Bridges, Child Well-being, Environment, Medical Research). "Across programs" is not a DDF program: it marks foundation-wide funds such as Humanity AI and the NYC COVID-19 Response &amp; Impact Fund.</p>
- <p>Edge width is the total size of the programs two funders share, not what either gave; DDF's own share is rarely public. Dashed edges mean the program size was not disclosed. Node size is total assets from each funder's latest IRS 990-PF or audited statement (mostly 2024); filings mix book and market value, so treat sizes as approximate. Faint nodes: no figure found, or the funder is not an endowed foundation (for example the NEA or the American Heart Association). Coordinated pledges where money was not pooled, such as the 2020 five-foundation payout increase, are left out.</p>
+ <p>Edge width is the total size of the programs two funders share, not what either gave; DDF's own share is rarely public. Dashed edges mean the program size was not disclosed. Node size is total assets from each funder's latest IRS 990-PF or audited statement (mostly 2024); filings mix book and market value, so treat sizes as approximate. Faint nodes with an outline: no figure found, or the funder is not an endowed foundation (for example the NEA or the American Heart Association). Coordinated pledges where money was not pooled, such as the 2020 five-foundation payout increase, are left out.</p>
 </details>
 </div>
 
@@ -148,34 +158,44 @@ try{const s=JSON.parse(localStorage.getItem("ddfCols")||"null");if(s)CATS.forEac
 
 const P=[
 {n:"Humanity AI",c:"Across programs",a:500,y0:2025,y1:2030,d:"$500M five-year coalition (aligned + pooled); $18M+ in pooled grants announced May 2026. Pooled fund at Rockefeller Philanthropy Advisors.",u:"https://www.fordfoundation.org/news-and-stories/news-and-press/news/humanity-ai-announces-more-than-18-million-in-new-grants-to-shape-ai-for-the-public-good/",f:["Ford","Kapor","Lumina","MacArthur","Mellon","Mozilla","Omidyar Network","Packard","Siegel Family"]},
-{n:"NYC COVID-19 Response & Impact Fund",c:"Across programs",a:110,y0:2020,y1:2020,d:"$75M from 18 lead funders at launch, $110M+ raised from 500+ donors; grants and zero-interest loans to NYC nonprofits. Shows 10 of the lead funders.",u:"https://carnegie.org/?p=2087",f:["Bloomberg","Carnegie","Ford","Altman","Revson","Robin Hood","Rockefeller Bros.","Tisch","UJA-Federation","Wells Fargo Fdn"]},
+{n:"NYC COVID-19 Response & Impact Fund",c:"Across programs",a:110,y0:2020,y1:2020,d:"$75M from 18 lead funders at launch, $110M+ raised from 500+ donors; grants and zero-interest loans to NYC nonprofits. Shows 10 of the lead funders.",u:"https://carnegie.org/?p=2087",f:["Bloomberg","Carnegie","Ford","Altman","Revson","Robin Hood","Rockefeller Bros.","Laurie M. Tisch Fund","UJA-Federation","Wells Fargo Fdn"]},
 {n:"Artists Make Technology",c:"Arts",a:11,y0:2026,y1:2028,d:"$11M three-year initiative co-anchored with Mozilla; $8M raised by Nov 2026.",u:"https://www.dorisduke.org/news/doris-duke-foundation-and-mozilla-foundation-announce-usd6-5m-commitment-to-ensure-performing-artists-are-at-the-center-of-technology-innovation",f:["Mozilla","Hewlett","Ford","MacArthur","Omidyar Network"]},
 {n:"DDF and Ford technology grants",c:"Arts",a:4,y0:2026,y1:2031,d:"Five grants, $4M+ over five years, for performing-arts technology infrastructure.",u:"https://www.dorisduke.org/news/doris-duke-foundation-announces-new-grants-supporting-technology-infrastructure-in-the-performing-arts",f:["Ford"]},
 {n:"National Dance Project",c:"Arts",a:51.4,y0:1999,y1:2026,d:"NEFA regranting (DDF since 1999); $51.4M+ across 807 projects as of 2024. NEA support is historical. Final cycle in 2026.",u:"https://www.nefa.org/node/787",f:["Mellon","Aliad Fund","NEA"]},
 {n:"MAP Fund regranting",c:"Arts",a:28.6,y0:2008,y1:2024,d:"DDF the primary funder ($21.8M, 2008–2024) with Mellon ($6.8M, 2010–2024); amount shown is those two combined. Regranting ended 2024.",u:"https://mapfund.org/about/history",f:["Mellon","NEA"]},
 {n:"National Theater Project",c:"Arts",a:19.5,y0:2017,y1:2026,d:"NEFA regranting led by Mellon; DDF support from at least 2017 ($750K expansion grant). $19.5M+ awarded since 2010.",u:"https://www.nefa.org/node/11099",f:["Mellon"]},
 {n:"Jazz Road",c:"Arts",a:5.5,y0:2018,y1:2026,d:"South Arts touring and residency grants; DDF $3.5M lead, Mellon $2M.",u:"https://southarts.org/news/south-arts-announces-new-grant-cycle-jazz-road-tours-initiative",f:["Mellon"]},
+{n:"Artist Relief",c:"Arts",a:10,y0:2020,y1:2021,d:"Emergency $5,000 grants to artists. Launched with $10M: Mellon's $5M seed matched by 22 foundations including DDF; $25M raised in all.",u:"https://www.joanmitchellfoundation.org/uploads/pdf/Artist-Relief_Press-Release-20200408.pdf",f:["Mellon","Ford","7G Foundation","Gottlieb Foundation","Amazon Literary","Warhol Foundation","Arison Arts","Emily Hall Tremaine","Frankenthaler","Jerome","Joan Mitchell","Knight","Kraus Family","Neiman Foundation","Metabolic Studio","Mike Kelley Foundation","Pritzker Pucker","Salomon Family","Rauschenberg Foundation","Hostetler-Wrigley","Teiger Foundation","Wallace Foundation","de Kooning Foundation"]},
+{n:"Mosaic Network and Fund",c:"Arts",a:4.5,y0:2019,y1:2024,d:"Pooled fund at The New York Community Trust for NYC arts groups led by people of color; $4.5M to 27 groups in 2020. Co-founded by DDF and the Trust. Shows the 16 funders confirmed by name (19 in all).",u:"https://thenytrust.org/collaborative-fund/mosaic-network-and-fund",f:["NY Community Trust","Mellon","Ford","Bloomberg","Surdna","Altman","Laurie M. Tisch Fund","Howard Gilman","Booth Ferris","Lambent","Lily Auchincloss","Miranda Family Fund","Matisse Foundation","Nathan Cummings","Deutsche Bank Americas"]},
 {n:"Muslim Narrative Change Cohort",c:"Building Bridges",a:null,y0:2020,y1:2021,d:"Pillars Fund fellowship cohort co-supported with the Pop Culture Collaborative.",u:"https://pillarsfund.org/2021/11/16/muslim-narrative-change-mnc-cohort-lays-groundwork-for-culture-change",f:["Pop Culture Collab."]},
 {n:"OPT-In for Families",c:"Child Well-being",a:33,y0:2024,y1:2026,d:"$33M coalition; ~$9M each to four sites shifting child welfare toward prevention.",u:"https://dorisduke.org/news/doris-duke-foundation-launches-new-opt-in-for-families-initiative-to-refocus-the-child-welfare-system-on-prevention",f:["Duke Endowment","Aviv"]},
+{n:"Think of Us (Audacious Project)",c:"Child Well-being",a:47.5,y0:2023,y1:2027,d:"$47.5M five-year commitment to Think of Us from Audacious Project donors plus Casey, Hilton, DDF and Aviv.",u:"https://www.insidephilanthropy.com/home/2023/5/11/an-audacious-effort-to-transform-the-foster-care-system-gets-a-big-funding-boost",f:["Annie E. Casey","Hilton","Aviv","Audacious Project"]},
 {n:"Institutional Challenge Grant",c:"Child Well-being",a:2.6,y0:2020,y1:2026,d:"~$2.6M a year to research-practice partnerships, led by the William T. Grant Foundation.",u:"https://wtgrantfoundation.org/announcing-the-2025-institutional-challenge-grantees",f:["W.T. Grant","Spencer","Bezos Family","Annie E. Casey","AIR"]},
 {n:"Tribal Nations Conservation Pledge",c:"Environment",a:102.5,y0:2023,y1:2028,d:"$102.5M over five years from 15 founding funders; DDF $32M. Pooled fund hosted by Native Americans in Philanthropy.",u:"https://www.dorisduke.org/news/doris-duke-foundation-and-partners-announce-over-100-million-for-tribal-led-conservation",f:["Alaska Conservation","Christensen","Decolonizing Wealth","Moore","Grousemont","J.M. Kaplan","Packard","Resources Legacy","Re:wild","Walton Family","Water Foundation","Wilburforce","Hewlett","Wyss"]},
+{n:"Landscape Conservation Catalyst Fund",c:"Environment",a:1,y0:2019,y1:2025,d:"Network for Landscape Conservation grants to landscape partnerships; at least $1M over the first five years, funded by DDF and Hewlett.",u:"https://landscapeconservation.org/?p=5513",f:["Hewlett"]},
 {n:"Appalachian Landscapes Protection Fund",c:"Environment",a:18,y0:2021,y1:2026,d:"$18M Open Space Institute fund; DDF $6M, the largest partner.",u:"https://www.insidephilanthropy.com/home/2021/4/2/a-new-fund-seeks-to-preserve-the-appalachians-and-capture-carbon-in-the-process",f:["Lyndhurst","William Penn","Jane's Trust","Tucker","Riverview","R.K. Mellon"]},
 {n:"Land trust climate planning grants",c:"Environment",a:null,y0:null,y1:null,d:"Land Trust Alliance and OSI grants for land-trust climate plans. Years not stated.",u:"https://landtrustalliance.org/newsroom/press-releases/land-trust-alliance-and-open-space-institute-award-grants-to-accelerate-climate-planning-nation-wide",f:["J.M. Kaplan","Jane's Trust","Merck Family","Oregon CF","Volgenau","William Penn"]},
 {n:"COVID-19 Fund to Retain Clinical Scientists",c:"Medical Research",a:12.1,y0:2021,y1:2022,d:"$12.1M to 22 medical schools ($500K each), led by DDF.",u:"https://www.dorisduke.org/siteassets/news--insights/2021-press-releases/11.16.21-covid19-frcs-press-release.pdf",f:["American Heart Assoc.","Burroughs Wellcome","Templeton","Rita Allen","Walder"]},
 {n:"Pathways for Health Research Collective",c:"Medical Research",a:null,y0:2024,y1:2026,d:"DDF-led funder collective: 18 symposia (2025), a funder roadmap (2026) and a joint call for proposals.",u:"https://www.dorisduke.org/StrengtheningPathways",f:["American Cancer Society","American Heart Assoc.","Burroughs Wellcome","Dana Foundation","Donaghue","Prebys","Robertson","Susan G. Komen"]},
 {n:"Doris Duke–Damon Runyon Clinical Investigator Award",c:"Medical Research",a:null,y0:2010,y1:2010,d:"One-off co-funded physician-scientist award.",u:"https://www.eurekalert.org/pub_releases/2010-07/drcr-dra063010.php",f:["Damon Runyon"]}
 ];
-const E={"DDF":2.3,"Ford":17.5,"Hewlett":14.2,"Bloomberg":12.1,"Moore":11.5,"MacArthur":9.3,"Packard":8.5,"Mellon":7.7,"Rockefeller Fdn":6.4,"Walton Family":6.1,"Carnegie":4.5,"Templeton":3.6,"Duke Endowment":5.0,"William Penn":3.4,"R.K. Mellon":3.4,"Annie E. Casey":3.4,"Lumina":1.5,"Rockefeller Bros.":1.4,"Burroughs Wellcome":0.85};
+const E={"DDF":2.3,"Ford":17.5,"Hewlett":14.2,"Bloomberg":12.1,"Moore":11.5,"MacArthur":9.3,"Packard":8.5,"Mellon":7.7,"Rockefeller Fdn":6.4,"Walton Family":6.1,"Carnegie":4.5,"Templeton":3.6,"Duke Endowment":5.0,"William Penn":3.4,"R.K. Mellon":3.4,"Annie E. Casey":3.4,"Lumina":1.5,"Rockefeller Bros.":1.4,"Burroughs Wellcome":0.85,"Hilton":7.4,"Knight":2.5,"Wallace Foundation":1.76,"Wyss":1.7,"Surdna":1.17,"Nathan Cummings":0.48,"Warhol Foundation":0.38};
 
-const W=1000,H=720,cx=W/2,cy=H/2,RAD=250;
-const svg=d3.select("#g"),root=svg.append("g"),gE=root.append("g"),gN=root.append("g");
-const rN=d=>d.id==="DDF"?14:(E[d.id]?4+Math.sqrt(E[d.id])*4.2:5);
-const ew=d3.scaleSqrt().domain([0,620]).range([1,9]);
+const W=1240,H=940,cx=W/2,cy=H/2;
+const svg=d3.select("#g"),root=svg.append("g"),gE=root.append("g"),gH=root.append("g"),gN=root.append("g");
+svg.insert("defs",":first-child").html('<radialGradient id="shine" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></radialGradient>');
+const rS=d3.scaleSqrt().domain([0,17.5]).range([4,24]);
+const rN=d=>E[d.id]?rS(E[d.id]):6;
+const ew=d3.scaleLog().domain([2,600]).range([1.2,6]).clamp(true);
+const dS=d3.scaleLog().domain([2,600]).range([400,240]).clamp(true);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const money=a=>a==null?"amount not found":"$"+(a>=1?(+a.toFixed(1)).toLocaleString():a)+"M";
 const yrs=p=>p.y0==null?"years not stated":(p.y0===p.y1?p.y0:p.y0+"–"+p.y1);
+const fmtE=v=>v>=1?"$"+(v>=10?v.toFixed(0):v.toFixed(1))+"B":"$"+Math.round(v*1000)+"M";
+const nameOf=id=>id==="DDF"?"Doris Duke Foundation":id;
+const catsOf=d=>[...new Set(d.progs.map(p=>p.c))].sort((a,b)=>CATS.indexOf(a)-CATS.indexOf(b));
 
-const on=new Set(CATS);let Y0=1988,Y1=2026,pickN=null,pickP=null,pos={},sim=null,timer=null;
+const on=new Set(CATS);let Y0=1988,Y1=2026,pickN=null,pickP=null,timer=null;
 
 /* chips, colour pickers, program select */
 const chips=document.getElementById("chips"),cols=document.getElementById("cols"),sel=document.getElementById("prog");
@@ -188,7 +208,7 @@ cols.addEventListener("input",e=>{const c=e.target.dataset.c;if(!c)return;COL[c]
  chips.querySelectorAll(".chip").forEach(b=>{if(b.dataset.c===c)b.querySelector("i").style.background=COL[c]});recolor();if(pickN||pickP)showDetail()});
 document.getElementById("cres").onclick=()=>{COL={...DEF};try{localStorage.removeItem("ddfCols")}catch(_){}paintUI();recolor();if(pickN||pickP)showDetail()};
 sel.innerHTML=`<option value="">All</option>`+P.map((p,i)=>`<option value="${i}">${esc(p.n)} (${esc(p.c)}, ${p.y0??"n.d."}, ${esc(money(p.a))})</option>`).join("");
-sel.onchange=()=>{pickN=null;pickP=sel.value===""?null:P[+sel.value];if(pickP&&!active().includes(pickP)){Y0=1988;Y1=2026;syncY();on.add(pickP.c);paintUI();build()}else{focus();showDetail()}};
+sel.onchange=()=>{pickN=null;pickP=sel.value===""?null:P[+sel.value];if(pickP&&!active().includes(pickP)){Y0=1988;Y1=2026;syncY();on.add(pickP.c);paintUI();build()}else{focus();showDetail()}if(pickP)fitTo(new Set(pickP.f));else svg.transition().duration(400).call(zoom.transform,d3.zoomIdentity)};
 
 /* years */
 const y0=document.getElementById("y0"),y1=document.getElementById("y1"),yf=document.getElementById("yfill");
@@ -203,99 +223,161 @@ function stopPlay(){clearInterval(timer);timer=null;playB.textContent="▶ Play"
 
 function active(){return P.filter(p=>on.has(p.c)&&(p.y0==null?(Y0===1988&&Y1===2026):(p.y0<=Y1&&p.y1>=Y0)))}
 
-/* zoom */
-const zoom=d3.zoom().scaleExtent([.4,5]).on("zoom",e=>{root.attr("transform",e.transform);svg.classed("zoomed",e.transform.k>=1.5)});
+/* zoom: labels keep a steady on-screen size */
+let kNow=1,ratio=1,small=false;
+function measure(){const w=svg.node().getBoundingClientRect().width||1000;ratio=W/w;small=window.innerWidth<700}
+measure();window.addEventListener("resize",()=>{measure();labels()});
+const zoom=d3.zoom().scaleExtent([1,8]).extent([[0,0],[W,H]]).translateExtent([[0,0],[W,H]])
+ .on("zoom",e=>{root.attr("transform",e.transform);if(e.transform.k!==kNow){kNow=e.transform.k;labels()}});
 svg.call(zoom).on("dblclick.zoom",null);
-document.getElementById("zin").onclick=()=>svg.transition().duration(250).call(zoom.scaleBy,1.4);
-document.getElementById("zout").onclick=()=>svg.transition().duration(250).call(zoom.scaleBy,1/1.4);
+document.getElementById("zin").onclick=()=>svg.transition().duration(220).call(zoom.scaleBy,1.6);
+document.getElementById("zout").onclick=()=>svg.transition().duration(220).call(zoom.scaleBy,1/1.6);
 document.getElementById("reset").onclick=()=>{stopPlay();svg.transition().duration(300).call(zoom.transform,d3.zoomIdentity);on.clear();CATS.forEach(c=>on.add(c));Y0=1988;Y1=2026;syncY();pickN=pickP=null;sel.value="";paintUI();build()};
-svg.on("click",e=>{if(e.target===svg.node()){pickN=pickP=null;sel.value="";focus();showDetail()}});
+function fitTo(ids,minK){const xs=[],ys=[];NODES.forEach(d=>{if(ids.has(d.id)){xs.push(d.x);ys.push(d.y)}});
+ if(xs.length<2){svg.transition().duration(400).call(zoom.transform,d3.zoomIdentity);return}
+ const x0=Math.min(...xs)-70,x1=Math.max(...xs)+70,y0=Math.min(...ys)-60,y1=Math.max(...ys)+40;
+ let k=Math.max(1,Math.min(8,.9*Math.min(W/(x1-x0),H/(y1-y0))));if(minK)k=Math.max(k,minK);if(small)k=Math.max(k,2);
+ svg.transition().duration(500).call(zoom.transform,d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-(x0+x1)/2,-(y0+y1)/2))}
+let press=null;
+svg.on("pointerdown",e=>{press={x:e.clientX,y:e.clientY}}).on("pointerup",e=>{if(press&&Math.abs(e.clientX-press.x)<6&&Math.abs(e.clientY-press.y)<6&&e.target===svg.node()&&(pickN||pickP)){pickN=pickP=null;sel.value="";focus();showDetail()}press=null});
 
-let NODES=[],LINKS=[];
+/* layout: program-area homes, label boxes that do not overlap, settled before drawing */
+const HOME={"Arts":[.27,.6],"Building Bridges":[.13,.2],"Child Well-being":[.87,.3],"Environment":[.55,.09],"Medical Research":[.84,.83],"Across programs":[.36,.13]};
+function anchor(d){if(d.id==="DDF")return[cx,cy];const ks=catsOf(d);let x=0,y=0;ks.forEach(k=>{x+=HOME[k][0];y+=HOME[k][1]});return[W*x/ks.length,H*y/ks.length]}
+function boxOf(d){const r=rN(d),len=d.id==="DDF"?21:d.id.length;return{w:Math.max(2*r,len*7)+6,h:2*r+20,cy:d.y-8}}
+function rectCollide(){let ns=[];function force(){for(let i=0;i<ns.length;i++){const a=ns[i],ba=boxOf(a);for(let j=i+1;j<ns.length;j++){const b=ns[j],bb=boxOf(b);
+ const dx=b.x-a.x,dy=bb.cy-ba.cy,ox=(ba.w+bb.w)/2-Math.abs(dx),oy=(ba.h+bb.h)/2-Math.abs(dy);if(ox<=0||oy<=0)continue;
+ const aF=a.fx!=null,bF=b.fx!=null;if(aF&&bF)continue;const sh=aF||bF?1:.5;
+ if(ox<oy){const sx=(dx>=0?1:-1)*ox*.8;if(!aF)a.x-=sx*sh;if(!bF)b.x+=sx*sh}else{const sy=(dy>=0?1:-1)*oy*.8;if(!aF)a.y-=sy*sh;if(!bF)b.y+=sy*sh}}}}
+ force.initialize=n=>{ns=n};return force}
+const biggest=e=>e.progs.reduce((m,p)=>Math.max(m,p.f.length+1),0);
+const sim=d3.forceSimulation()
+ .force("link",d3.forceLink().id(d=>d.id).distance(e=>e.k==="d"?(e.u?430:dS(e.w)):90+14*Math.sqrt(biggest(e)))
+  .strength(e=>e.k==="d"?.06:Math.min(.9,(biggest(e)>10?.22:.35)+.15*e.progs.length)))
+ .force("charge",d3.forceManyBody().strength(-620).distanceMax(420))
+ .force("collide",d3.forceCollide(d=>rN(d)+20))
+ .force("rect",rectCollide())
+ .force("x",d3.forceX(d=>anchor(d)[0]).strength(.07))
+ .force("y",d3.forceY(d=>anchor(d)[1]).strength(.07)).stop();
+const clamp=d=>{d.x=Math.max(50,Math.min(W-50,d.x));d.y=Math.max(34,Math.min(H-16,d.y))};
+let NODES=[],LINKS=[],L=gE.selectAll("line"),HT=gH.selectAll("line"),N=gN.selectAll("g.node"),pos={};
+function draw(){const set=s=>s.attr("x1",e=>e.source.x).attr("y1",e=>e.source.y).attr("x2",e=>e.target.x).attr("y2",e=>e.target.y);
+ set(L);set(HT);N.attr("transform",d=>`translate(${d.x},${d.y})`)}
+sim.on("tick",()=>{NODES.forEach(clamp);draw()});
+
 function build(){
- const A=active(),inP={},home={},pair={};
- A.forEach(p=>p.f.forEach(f=>{(inP[f]=inP[f]||[]).push(p);const h=home[f];if(!h||(p.a||0)>(h.a||0)||((p.a||0)===(h.a||0)&&p.f.length>h.f.length))home[f]=p}));
- A.forEach(p=>{for(let i=0;i<p.f.length;i++)for(let j=i+1;j<p.f.length;j++){const k=[p.f[i],p.f[j]].sort().join("|");(pair[k]=pair[k]||[]).push(p)}});
- const homes=[...new Set(Object.values(home))],anc=new Map();
- homes.sort((a,b)=>CATS.indexOf(a.c)-CATS.indexOf(b.c)).forEach((h,i)=>{const t=i/Math.max(1,homes.length)*2*Math.PI-Math.PI/2;anc.set(h,{x:cx+RAD*Math.cos(t),y:cy+RAD*.82*Math.sin(t)})});
- NODES=[{id:"DDF",progs:A,fx:cx,fy:cy}].concat(Object.keys(inP).map(id=>({id,progs:inP[id],h:home[id],...(pos[id]||{x:cx+(Math.random()-.5)*60,y:cy+(Math.random()-.5)*60})})));
- const sum=ps=>ps.reduce((s,p)=>s+(p.a||0),0),und=ps=>ps.every(p=>p.a==null);
- LINKS=Object.keys(inP).map(id=>({source:"DDF",target:id,progs:inP[id],w:sum(inP[id]),u:und(inP[id]),k:"d"}))
-  .concat(Object.entries(pair).map(([k,ps])=>{const[a,b]=k.split("|");return{source:a,target:b,progs:ps,w:sum(ps),u:und(ps),k:"c"}}));
- if(pickN&&!inP[pickN]&&pickN!=="DDF")pickN=null;
+ NODES.forEach(d=>{pos[d.id]={x:d.x,y:d.y}});
+ const A=active(),map={DDF:{id:"DDF",progs:A.slice()}},pair={};
+ A.forEach(p=>{p.f.forEach(f=>{(map[f]=map[f]||{id:f,progs:[]}).progs.push(p)});
+  const all=["DDF",...p.f];for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){const a=all[i],b=all[j],k=a<b?a+"|"+b:b+"|"+a;
+   const e=pair[k]||(pair[k]={key:k,source:a,target:b,w:0,u:true,progs:[]});if(p.a!=null){e.w+=p.a;e.u=false}e.progs.push(p)}});
+ NODES=Object.values(map).map(d=>{const q=pos[d.id];if(d.id==="DDF"){d.fx=d.x=cx;d.fy=d.y=cy}else if(q){d.x=q.x;d.y=q.y}else{const a=anchor(d);d.x=a[0]+(Math.random()-.5)*80;d.y=a[1]+(Math.random()-.5)*80}return d});
+ if(Object.keys(map).length===1)NODES=[];
+ LINKS=Object.values(pair).map(e=>(e.k=(e.source==="DDF"||e.target==="DDF")?"d":"c",e));
+ if(pickN&&!map[pickN])pickN=null;
  if(pickP&&!A.includes(pickP)){pickP=null;sel.value=""}
- document.getElementById("nf").textContent=(NODES.length-1)+" funders";
- document.getElementById("np").textContent=A.length+" grant programs";
- if(sim)sim.stop();
- sim=d3.forceSimulation(NODES)
-  .force("link",d3.forceLink(LINKS).id(d=>d.id).distance(d=>d.k==="d"?RAD:34).strength(d=>d.k==="d"?.015:.07))
-  .force("charge",d3.forceManyBody().strength(-70))
-  .force("collide",d3.forceCollide(d=>d.id==="DDF"?70:rN(d)+10))
-  .force("x",d3.forceX(d=>d.h?anc.get(d.h).x:cx).strength(.22))
-  .force("y",d3.forceY(d=>d.h?anc.get(d.h).y:cy).strength(.22));
- const L=gE.selectAll("path").data(LINKS,d=>(d.source.id||d.source)+"~"+(d.target.id||d.target)).join("path")
-  .attr("class",d=>"edge"+(d.k==="c"?" co":"")+(d.u?" und":"")).attr("stroke-width",d=>d.k==="c"?Math.max(.6,ew(d.w)*.45):ew(d.w));
- const N=gN.selectAll("g.node").data(NODES,d=>d.id).join(en=>{const g=en.append("g").attr("class","node").attr("tabindex",0);g.append("g").attr("class","pie");g.append("circle").attr("class","ring");g.append("text");return g});
- N.classed("ddf",d=>d.id==="DDF").classed("multi",d=>d.id!=="DDF"&&new Set(d.progs.map(p=>p.c)).size>1);
+ const nf=Math.max(0,NODES.length-1);
+ document.getElementById("nf").textContent=nf+" funder"+(nf===1?"":"s");
+ document.getElementById("np").textContent=A.length+" grant program"+(A.length===1?"":"s");
+ L=gE.selectAll("line").data(LINKS,e=>e.key).join("line").attr("class",e=>"edge"+(e.k==="c"?" co":"")+(e.u?" und":"")).attr("stroke-width",e=>e.k==="d"?(e.u?1:ew(e.w)):null);
+ HT=gH.selectAll("line").data(LINKS.filter(e=>e.k==="d"),e=>e.key).join("line").attr("class","hit");
+ N=gN.selectAll("g.node").data(NODES,d=>d.id).join(en=>{const g=en.append("g").attr("class","node").attr("tabindex",0).style("opacity",0);
+  g.append("g").attr("class","pie");g.append("circle").attr("class","shine");g.append("circle").attr("class","ring");g.append("circle").attr("class","tap");g.append("text").attr("text-anchor","middle");
+  g.transition().duration(450).style("opacity",1);return g});
+ N.classed("ddf",d=>d.id==="DDF").classed("multi",d=>d.id!=="DDF"&&d.progs.length>1).classed("nf",d=>!E[d.id]);
+ N.select("circle.shine").attr("r",rN).attr("fill","url(#shine)").style("display",d=>E[d.id]?null:"none");
  N.select("circle.ring").attr("r",rN);
- N.select("text").text(d=>d.id==="DDF"?"Doris Duke Foundation":d.id).attr("text-anchor","middle").attr("dy",d=>d.id==="DDF"?rN(d)+16:-rN(d)-5)
-  .classed("minor",d=>d.id!=="DDF"&&new Set(d.progs.map(p=>p.c)).size<2&&(E[d.id]||0)<3);
- N.on("click",(e,d)=>{e.stopPropagation();pickN=d.id;pickP=null;sel.value="";focus();showDetail();document.getElementById("hint").style.display="none"})
-  .on("keydown",(e,d)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pickN=d.id;pickP=null;focus();showDetail()}})
-  .on("mouseenter",(e,d)=>{if(!pickN&&!pickP)focus(d.id)}).on("mouseleave",()=>{if(!pickN&&!pickP)focus()})
+ N.select("text").attr("dy",d=>-(rN(d)+5)).text(d=>nameOf(d.id));
+ N.on("pointerdown",e=>{press={x:e.clientX,y:e.clientY};hideTip()})
+  .on("pointerup",(e,d)=>{if(press&&Math.abs(e.clientX-press.x)<6&&Math.abs(e.clientY-press.y)<6)tapNode(d);press=null})
+  .on("keydown",(e,d)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tapNode(d)}})
+  .on("mouseenter",(e,d)=>{if(e.pointerType==="touch")return;if(!pickN&&!pickP)focus(d.id);nodeTip(e,d)})
+  .on("mousemove",moveTip).on("mouseleave",()=>{hideTip();focus()})
   .call(d3.drag().on("start",(e,d)=>{if(d.id==="DDF")return;if(!e.active)sim.alphaTarget(.25).restart();d.fx=d.x;d.fy=d.y})
-   .on("drag",(e,d)=>{if(d.id==="DDF")return;d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(d.id==="DDF")return;if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+   .on("drag",(e,d)=>{if(d.id==="DDF")return;const p=d3.pointer(e,root.node());d.fx=p[0];d.fy=p[1]})
+   .on("end",(e,d)=>{if(d.id==="DDF")return;if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+ HT.on("mouseenter",(e,l)=>{if(e.pointerType==="touch")return;linkTip(e,l);if(!pickN&&!pickP)focusLink(l)}).on("mousemove",moveTip).on("mouseleave",()=>{hideTip();focus()})
+  .on("click",(e,l)=>{e.stopPropagation();const o=l.source.id==="DDF"?l.target:l.source;tapNode(o)});
  recolor();
- sim.on("tick",()=>{NODES.forEach(d=>{pos[d.id]={x:d.x,y:d.y}});
-  L.attr("d",d=>`M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
-  N.attr("transform",d=>`translate(${d.x},${d.y})`)});
- focus();showDetail();
+ sim.nodes(NODES);sim.force("link").links(LINKS);
+ sim.alpha(1);for(let i=0;i<400;i++){sim.tick();NODES.forEach(clamp)}
+ draw();sim.alpha(.04).restart();
+ labels();focus();showDetail();
+ document.getElementById("empty").style.display=A.length?"none":"flex";
+}
+function tapNode(d){document.getElementById("hint").style.display="none";
+ if(pickN===d.id){pickN=null;focus();showDetail();return}
+ pickN=d.id;pickP=null;sel.value="";focus();showDetail();
+ const near=new Set([d.id]);LINKS.forEach(l=>{if(l.source.id===d.id||l.target.id===d.id){near.add(l.source.id);near.add(l.target.id)}});
+ if(d.id!=="DDF"&&near.size>2)near.delete("DDF");if(d.id!=="DDF")fitTo(near,1.8)}
+function labels(){
+ const fs=Math.max(12,(small?8:11)*ratio/kNow);
+ N.select("circle.tap").attr("r",d=>Math.max(rN(d),(small?16:10)*ratio/kNow));
+ N.select("text").style("font-size",fs+"px").style("stroke-width",(3*ratio/kNow).toFixed(1)+"px")
+  .classed("off",d=>small&&kNow<2.5&&!(d.id==="DDF"||(E[d.id]||0)>=1||d.id===pickN));
 }
 function recolor(){
  const arc=d3.arc().innerRadius(0);
- gN.selectAll("g.node").each(function(d){
-  const g=d3.select(this).select("g.pie"),r=rN(d);
-  if(d.id==="DDF"){g.selectAll("path").data([1]).join("path").attr("d",arc.outerRadius(r)({startAngle:0,endAngle:2*Math.PI})).attr("fill","var(--ddf)").attr("fill-opacity",1);return}
-  const cats=[...new Set(d.progs.map(p=>p.c))].sort((a,b)=>CATS.indexOf(a)-CATS.indexOf(b));
-  const sl=d3.pie().value(1).sort(null)(cats);
-  g.selectAll("path").data(sl).join("path").attr("d",s=>arc.outerRadius(r)(s)).attr("fill",s=>COL[s.data]).attr("fill-opacity",E[d.id]?.95:.4);
- });
+ N.each(function(d){const g=d3.select(this),r=rN(d),has=!!E[d.id];
+  const ks=d.id==="DDF"?["DDF"]:catsOf(d),c=k=>k==="DDF"?"var(--ddf)":COL[k];
+  g.select("g.pie").selectAll("path").data(d3.pie().value(1).sort(null)(ks)).join("path").attr("d",arc.outerRadius(r))
+   .attr("fill",a=>c(a.data)).attr("fill-opacity",has?.95:.18);
+  g.select("circle.ring").attr("fill","none").attr("stroke",has?"var(--bg)":c(ks[0])).attr("stroke-width",has?1.2:1.4).attr("stroke-opacity",has?.9:.9)});
+ chips.querySelectorAll(".chip i").forEach((i,n)=>i.style.background=COL[CATS[n]]);
 }
 function focus(hov){
- const svgEl=svg.node(),id=pickN||hov;
- let nb=null,eh=null;
+ const id=pickN||hov;let nb=null,eh=null;
  if(pickP){nb=new Set(["DDF",...pickP.f]);eh=l=>l.progs.includes(pickP)}
  else if(id){nb=new Set([id]);LINKS.forEach(l=>{if(l.source.id===id||l.target.id===id){nb.add(l.source.id);nb.add(l.target.id)}});eh=l=>l.source.id===id||l.target.id===id}
- svgEl.classList.toggle("pick",!!nb);
- gE.selectAll("path").classed("hot",l=>!!eh&&eh(l)).classed("dim",l=>!!eh&&!eh(l));
- gN.selectAll("g.node").classed("hot",d=>!!nb&&nb.has(d.id)).classed("dim",d=>!!nb&&!nb.has(d.id)).classed("picked",d=>d.id===pickN);
+ svg.classed("pick",!!nb);
+ L.classed("hot",l=>!!eh&&eh(l)).classed("dim",l=>!!eh&&!eh(l));
+ N.classed("hot",d=>!!nb&&nb.has(d.id)).classed("dim",d=>!!nb&&!nb.has(d.id)).classed("picked",d=>d.id===pickN);
+ labels();
 }
+function focusLink(l0){svg.classed("pick",true);L.classed("hot",l=>l===l0).classed("dim",l=>l!==l0);N.classed("hot",d=>d===l0.source||d===l0.target).classed("dim",d=>d!==l0.source&&d!==l0.target)}
+
+/* hover pop-ups */
+const tip=document.getElementById("tip");
+function moveTip(ev){if(tip.hidden)return;const r=tip.parentNode.getBoundingClientRect();let x=ev.clientX-r.left+14,y=ev.clientY-r.top+14;
+ if(x+tip.offsetWidth>r.width-4)x=ev.clientX-r.left-tip.offsetWidth-14;if(y+tip.offsetHeight>r.height-4)y=ev.clientY-r.top-tip.offsetHeight-14;
+ tip.style.left=Math.max(4,x)+"px";tip.style.top=Math.max(4,y)+"px"}
+function hideTip(){tip.hidden=true}
+const dot=c=>`<i style="background:${COL[c]}"></i>`;
+function nodeTip(ev,d){
+ const en=E[d.id]?"Assets "+fmtE(E[d.id])+" · ":"Assets not found · ";
+ const list=d.id==="DDF"?`<li>${d.progs.length} programs shown</li>`:d.progs.map(p=>`<li>${dot(p.c)}${esc(p.n)} <span class="m">· ${esc(money(p.a))}</span></li>`).join("");
+ tip.innerHTML=`<div class="hd"><b>${esc(nameOf(d.id))}</b><span class="cta">Click for more</span></div><div class="m">${d.id==="DDF"?"Total assets $2.3B (2024)":en+d.progs.length+" program"+(d.progs.length===1?"":"s")+" with DDF"}</div><ul>${list}</ul>`;
+ tip.hidden=false;moveTip(ev)}
+function linkTip(ev,l){const o=l.source.id==="DDF"?l.target:l.source;
+ tip.innerHTML=`<div class="hd"><b>DDF and ${esc(o.id)}</b></div><div class="m">${l.u?"Program size not disclosed":"Combined program size "+esc(money(l.w))}</div><ul>${l.progs.map(p=>`<li>${dot(p.c)}${esc(p.n)} <span class="m">· ${esc(yrs(p))}</span></li>`).join("")}</ul>`;
+ tip.hidden=false;moveTip(ev)}
+
 const det=document.getElementById("detail");
-function progItem(p,i){const oth=p.f.length;return `<button class="item" data-p="${P.indexOf(p)}"><b>${esc(p.n)}</b> · <span style="color:${COL[p.c]}">${esc(p.c)}</span> · ${esc(yrs(p))} · ${esc(money(p.a))}<div class="d">${esc(p.d)} · ${oth} other funder${oth===1?"":"s"} · <a href="${esc(p.u)}" target="_blank" rel="noopener">Source</a></div></button>`}
+function progItem(p){const oth=p.f.length;return `<button class="item" data-p="${P.indexOf(p)}"><b>${esc(p.n)}</b> · <span style="color:${COL[p.c]}">${esc(p.c)}</span> · ${esc(yrs(p))} · ${esc(money(p.a))}<div class="d">${esc(p.d)} · ${oth} other funder${oth===1?"":"s"} · <a href="${esc(p.u)}" target="_blank" rel="noopener">Source</a></div></button>`}
 function showDetail(){
- if(!pickN&&!pickP){det.hidden=true;return}
+ if(!pickN&&!pickP){det.hidden=true;measure();return}
  det.hidden=false;let h=`<button class="x" aria-label="Close">×</button>`;
- if(pickP){h+=`<h2>${esc(pickP.n)}</h2><div class="meta"><span style="color:${COL[pickP.c]}">${esc(pickP.c)}</span> · ${esc(yrs(pickP))} · ${esc(money(pickP.a))}</div><p style="margin:8px 0">${esc(pickP.d)} <a href="${esc(pickP.u)}" target="_blank" rel="noopener">Source</a></p><div class="meta" style="margin-bottom:4px">Funders with DDF (${pickP.f.length})</div>`+pickP.f.map(f=>`<button class="item" data-f="${esc(f)}">${esc(f)}<span class="d"> · ${E[f]?"$"+E[f]+"B assets":"assets not found"}</span></button>`).join("")}
+ if(pickP){h+=`<h2>${esc(pickP.n)}</h2><div class="meta"><span style="color:${COL[pickP.c]}">${esc(pickP.c)}</span> · ${esc(yrs(pickP))} · ${esc(money(pickP.a))}</div><p style="margin:8px 0">${esc(pickP.d)} <a href="${esc(pickP.u)}" target="_blank" rel="noopener">Source</a></p><div class="meta" style="margin-bottom:4px">Funders with DDF (${pickP.f.length})</div>`+pickP.f.map(f=>`<button class="item" data-f="${esc(f)}">${esc(f)}<span class="d"> · ${E[f]?fmtE(E[f])+" assets":"assets not found"}</span></button>`).join("")}
  else if(pickN==="DDF"){const A=active();h+=`<h2>Doris Duke Foundation</h2><div class="meta">Total assets ~$2.3B (2024) · ${A.length} programs shown</div>`+A.map(progItem).join("")}
  else{const n=NODES.find(d=>d.id===pickN);if(!n){det.hidden=true;return}
-  h+=`<h2>${esc(n.id)}</h2><div class="meta">${E[n.id]?"Total assets $"+E[n.id]+"B (latest filing)":"Assets not found"} · ${n.progs.length} program${n.progs.length===1?"":"s"} with DDF</div>`+n.progs.map(progItem).join("")}
- det.innerHTML=h;
+  h+=`<h2>${esc(n.id)}</h2><div class="meta">${E[n.id]?"Total assets "+fmtE(E[n.id])+" (latest filing)":"Assets not found"} · ${n.progs.length} program${n.progs.length===1?"":"s"} with DDF</div>`+n.progs.map(progItem).join("")}
+ det.innerHTML=h;measure();
 }
 det.addEventListener("click",e=>{
  if(e.target.closest("a"))return;
  if(e.target.closest(".x")){pickN=pickP=null;sel.value="";focus();showDetail();return}
  const b=e.target.closest(".item");if(!b)return;
- if(b.dataset.p!=null){pickP=P[+b.dataset.p];pickN=null;sel.value=b.dataset.p}
- else if(b.dataset.f){pickN=b.dataset.f;pickP=null;sel.value=""}
+ if(b.dataset.p!=null){pickP=P[+b.dataset.p];pickN=null;sel.value=b.dataset.p;fitTo(new Set(pickP.f))}
+ else if(b.dataset.f){const d=NODES.find(n=>n.id===b.dataset.f);if(d){pickP=null;sel.value="";tapNode(d);return}}
  focus();showDetail()});
 
 /* legends */
 (function(){
  const e=d3.select("#lgE"),xs=[[3,"$3M"],[30,"$30M"],[300,"$300M"]];
  xs.forEach(([v,t],i)=>{const x=10+i*62;e.append("line").attr("x1",x).attr("x2",x+40).attr("y1",12).attr("y2",12).attr("stroke","var(--edge)").attr("stroke-width",ew(v)).attr("stroke-linecap","round");e.append("text").attr("x",x+20).attr("y",36).attr("text-anchor","middle").text(t)});
- e.append("line").attr("x1",196).attr("x2",226).attr("y1",12).attr("y2",12).attr("stroke","var(--edge)").attr("stroke-width",1.5).attr("stroke-dasharray","2 4");e.append("text").attr("x",211).attr("y",36).attr("text-anchor","middle").text("not found");
- const n=d3.select("#lgN");[[0.1,"$100M"],[1,"$1B"],[10,"$10B"]].forEach(([v,t],i)=>{const r=4+Math.sqrt(v)*4.2,x=22+i*62;n.append("circle").attr("cx",x).attr("cy",22).attr("r",r).attr("fill","none").attr("stroke","var(--muted)");n.append("text").attr("x",x).attr("y",52).attr("text-anchor","middle").text(t)});
- n.append("circle").attr("cx",205).attr("cy",22).attr("r",5).attr("fill","var(--muted)").attr("fill-opacity",.35);n.append("text").attr("x",205).attr("y",52).attr("text-anchor","middle").text("not found");
+ e.append("line").attr("x1",196).attr("x2",226).attr("y1",12).attr("y2",12).attr("stroke","var(--edge)").attr("stroke-width",1.2).attr("stroke-dasharray","2 4");e.append("text").attr("x",211).attr("y",36).attr("text-anchor","middle").text("not found");
+ const n=d3.select("#lgN");[[0.1,"$100M"],[1,"$1B"],[10,"$10B"]].forEach(([v,t],i)=>{const r=rS(v)*.8,x=22+i*62;n.append("circle").attr("cx",x).attr("cy",22).attr("r",r).attr("fill","var(--muted)").attr("fill-opacity",.85);n.append("text").attr("x",x).attr("y",52).attr("text-anchor","middle").text(t)});
+ n.append("circle").attr("cx",205).attr("cy",22).attr("r",5).attr("fill","var(--muted)").attr("fill-opacity",.18).attr("stroke","var(--muted)").attr("stroke-width",1.2);n.append("text").attr("x",205).attr("y",52).attr("text-anchor","middle").text("not found");
 })();
 
 paintUI();syncY();build();
